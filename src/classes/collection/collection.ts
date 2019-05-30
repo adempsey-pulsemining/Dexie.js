@@ -180,7 +180,7 @@ export class Collection implements ICollection {
             index,
             range: ctx.range
           }
-        }).then(({result}) => valueMapper ? result.map(valueMapper) : result);
+        }).then(({result}) => valueMapper ? Promise.all(result.map(valueMapper)) : result);
       } else {
         // Getting array through a cursor.
         const a = [];
