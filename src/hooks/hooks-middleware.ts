@@ -59,10 +59,24 @@ export const hooksMiddleware: Middleware<DBCore>  = {
                 const ctx = { onerror: null, onsuccess: null };
                 if (req.type === 'delete') {
                   // delete operation
-                  deleting.fire.call(ctx, key, existingValue, dxTrans);
+                  let a = deleting.fire.call(ctx, key, existingValue, dxTrans);
+                  if (a) {
+                    Promise.resolve(a).catch(() => {
+                      if (dxTrans.idbtrans) {
+                        dxTrans.idbtrans.abort();
+                      }
+                    });
+                  }
                 } else if (req.type === 'add' || existingValue === undefined) {
                   // The add() or put() resulted in a create
                   const generatedPrimaryKey = creating.fire.call(ctx, key, req.values[i], dxTrans);
+                  if (generatedPrimaryKey) {
+                    Promise.resolve(generatedPrimaryKey).catch(() => {
+                      if (dxTrans.idbtrans) {
+                        dxTrans.idbtrans.abort();
+                      }
+                    });
+                  }
                   if (key == null && generatedPrimaryKey != null) {
                     key = generatedPrimaryKey;
                     req.keys[i] = key;
@@ -75,6 +89,11 @@ export const hooksMiddleware: Middleware<DBCore>  = {
                   const objectDiff = getObjectDiff(existingValue, req.values[i]);
                   const additionalChanges = updating.fire.call(ctx, objectDiff, key, existingValue, dxTrans);
                   if (additionalChanges) {
+                    Promise.resolve(additionalChanges).catch(() => {
+                      if (dxTrans.idbtrans) {
+                        dxTrans.idbtrans.abort();
+                      }
+                    });
                     const requestedValue = req.values[i];
                     Object.keys(additionalChanges).forEach(keyPath => {
                       setByKeyPath(requestedValue, keyPath, additionalChanges[keyPath]);
